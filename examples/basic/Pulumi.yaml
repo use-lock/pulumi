@@ -1,0 +1,53 @@
+name: lock-basic
+runtime: yaml
+description: Create a Lock realm and a confidential OAuth client.
+
+plugins:
+  providers:
+    - name: lock
+      path: ../../bin
+
+config:
+  baseUrl:
+    type: string
+  clientId:
+    type: string
+  clientSecret:
+    type: string
+    secret: true
+  realmDomain:
+    type: string
+
+resources:
+  lockProvider:
+    type: pulumi:providers:lock
+    properties:
+      baseUrl: ${baseUrl}
+      clientId: ${clientId}
+      clientSecret: ${clientSecret}
+
+  realm:
+    type: lock:index:Realm
+    properties:
+      slug: staging
+      name: Staging
+      domain: ${realmDomain}
+    options:
+      provider: ${lockProvider}
+
+  serviceClient:
+    type: lock:index:Client
+    properties:
+      realm: ${realm.slug}
+      name: Backend service
+      tokenEndpointAuthMethod: client_secret_basic
+      grantTypes:
+        - client_credentials
+      consentRequired: false
+    options:
+      provider: ${lockProvider}
+
+outputs:
+  issuer: ${realm.issuer}
+  clientId: ${serviceClient.clientId}
+  clientSecret: ${serviceClient.clientSecret}

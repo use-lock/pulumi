@@ -1,0 +1,11 @@
+.DS_Store
+.idea/
+bin/
+dist/
+*.test
+coverage.out
+.pulumi/
+Pulumi.*.yaml
+!Pulumi.yaml
+sdk/nodejs/node_modules/
+sdk/nodejs/bin/

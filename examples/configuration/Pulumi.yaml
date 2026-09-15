@@ -1,0 +1,93 @@
+name: lock-configuration
+runtime: yaml
+description: Manage realm policy, an OAuth client, a protected API with scopes, and Google login.
+
+plugins:
+  providers:
+    - name: lock
+      path: ../../bin
+
+config:
+  baseUrl:
+    type: string
+  clientId:
+    type: string
+  clientSecret:
+    type: string
+    secret: true
+  realmDomain:
+    type: string
+  googleClientId:
+    type: string
+  googleClientSecret:
+    type: string
+    secret: true
+
+resources:
+  lockProvider:
+    type: pulumi:providers:lock
+    properties:
+      baseUrl: ${baseUrl}
+      clientId: ${clientId}
+      clientSecret: ${clientSecret}
+
+  realm:
+    type: lock:index:Realm
+    properties:
+      slug: staging
+      name: Staging
+      domain: ${realmDomain}
+      settings:
+        accessTokenLifetime: 3600
+        passwordMinLength: 14
+        emailVerificationRequired: true
+        loginMethods:
+          - password
+          - social
+    options:
+      provider: ${lockProvider}
+
+  serviceClient:
+    type: lock:index:Client
+    properties:
+      realm: ${realm.slug}
+      name: Backend service
+      tokenEndpointAuthMethod: client_secret_basic
+      grantTypes:
+        - client_credentials
+      consentRequired: false
+    options:
+      provider: ${lockProvider}
+
+  invoicesApi:
+    type: lock:index:ProtectedResource
+    properties:
+      realm: ${realm.slug}
+      identifier: /invoices-api
+      name: Invoices API
+      scopes:
+        invoices:read:
+          description: Read invoices
+        invoices:write:
+          description: Create and update invoices
+    options:
+      provider: ${lockProvider}
+
+  google:
+    type: lock:index:SocialProvider
+    properties:
+      realm: ${realm.slug}
+      key: google
+      driver: google
+      enabled: true
+      config:
+        clientId: ${googleClientId}
+        clientSecret: ${googleClientSecret}
+    options:
+      provider: ${lockProvider}
+
+outputs:
+  issuer: ${realm.issuer}
+  clientId: ${serviceClient.clientId}
+  clientSecret: ${serviceClient.clientSecret}
+  googleCallbackUrl: ${google.callbackUrl}
