@@ -10,7 +10,7 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/pulumi/pulumi/sdk/v3/go/property"
-	lock "github.com/use-lock/client-go"
+	"github.com/use-lock/client-go/management"
 )
 
 type SocialProvider struct{}
@@ -125,16 +125,16 @@ func (SocialProvider) Create(ctx context.Context, req infer.CreateRequest[Social
 		return infer.CreateResponse[SocialProviderState]{Output: SocialProviderState{SocialProviderArgs: req.Inputs}}, nil
 	}
 	args := req.Inputs
-	response, err := infer.GetConfig[Config](ctx).socialProviders.V1RealmsSocialProvidersStoreWithResponse(ctx, args.Realm, lock.CreateSocialProviderData{
-		Key: args.Key, Driver: lock.SocialProviderDriver(args.Driver), Enabled: args.Enabled, Config: socialCredentials(args.Config),
+	response, err := infer.GetConfig[Config](ctx).socialProviders.CreateSocialProvider(ctx, args.Realm, management.CreateSocialProviderData{
+		Key: args.Key, Driver: management.SocialProviderDriver(args.Driver), Enabled: args.Enabled, Config: socialCredentials(args.Config),
 	})
 	if err != nil {
-		return infer.CreateResponse[SocialProviderState]{}, err
+		return infer.CreateResponse[SocialProviderState]{}, requestError("create social provider", err)
 	}
-	if response.JSON201 == nil || response.JSON201.Data.ID == "" || response.JSON201.Data.Realm != args.Realm || response.JSON201.Data.Key != args.Key || string(response.JSON201.Data.Driver) != string(args.Driver) {
-		return infer.CreateResponse[SocialProviderState]{}, apiError("create social provider", response.StatusCode())
+	if response.Data.ID == "" || response.Data.Realm != args.Realm || response.Data.Key != args.Key || string(response.Data.Driver) != string(args.Driver) {
+		return infer.CreateResponse[SocialProviderState]{}, apiError("create social provider", http.StatusCreated)
 	}
-	state := socialProviderState(response.JSON201.Data, args.Config)
+	state := socialProviderState(response.Data, args.Config)
 	return infer.CreateResponse[SocialProviderState]{ID: args.Realm + "/" + state.ProviderID, Output: state}, nil
 }
 
@@ -151,14 +151,14 @@ func (SocialProvider) Update(ctx context.Context, req infer.UpdateRequest[Social
 		return infer.UpdateResponse[SocialProviderState]{}, err
 	}
 	credentials := socialCredentials(req.Inputs.Config)
-	response, err := infer.GetConfig[Config](ctx).socialProviders.APIV1RealmsSocialProvidersUpdatePatchWithResponse(ctx, realm, id, lock.UpdateSocialProviderData{Enabled: &req.Inputs.Enabled, Config: &credentials})
+	response, err := infer.GetConfig[Config](ctx).socialProviders.PatchSocialProvider(ctx, realm, id, management.UpdateSocialProviderData{Enabled: &req.Inputs.Enabled, Config: &credentials})
 	if err != nil {
-		return infer.UpdateResponse[SocialProviderState]{}, err
+		return infer.UpdateResponse[SocialProviderState]{}, requestError("update social provider", err)
 	}
-	if response.JSON200 == nil || response.JSON200.Data.ID != id || response.JSON200.Data.Realm != realm {
-		return infer.UpdateResponse[SocialProviderState]{}, apiError("update social provider", response.StatusCode())
+	if response.Data.ID != id || response.Data.Realm != realm {
+		return infer.UpdateResponse[SocialProviderState]{}, apiError("update social provider", http.StatusOK)
 	}
-	return infer.UpdateResponse[SocialProviderState]{Output: socialProviderState(response.JSON200.Data, config)}, nil
+	return infer.UpdateResponse[SocialProviderState]{Output: socialProviderState(response.Data, config)}, nil
 }
 
 func (SocialProvider) Read(ctx context.Context, req infer.ReadRequest[SocialProviderArgs, SocialProviderState]) (infer.ReadResponse[SocialProviderArgs, SocialProviderState], error) {
@@ -166,17 +166,17 @@ func (SocialProvider) Read(ctx context.Context, req infer.ReadRequest[SocialProv
 	if err != nil {
 		return infer.ReadResponse[SocialProviderArgs, SocialProviderState]{}, err
 	}
-	response, err := infer.GetConfig[Config](ctx).socialProviders.V1RealmsSocialProvidersShowWithResponse(ctx, realm, id)
-	if err != nil {
-		return infer.ReadResponse[SocialProviderArgs, SocialProviderState]{}, err
-	}
-	if response.StatusCode() == http.StatusNotFound {
+	response, err := infer.GetConfig[Config](ctx).socialProviders.GetSocialProvider(ctx, realm, id)
+	if isNotFound(err) {
 		return infer.ReadResponse[SocialProviderArgs, SocialProviderState]{}, nil
 	}
-	if response.JSON200 == nil || response.JSON200.Data.ID != id || response.JSON200.Data.Realm != realm {
-		return infer.ReadResponse[SocialProviderArgs, SocialProviderState]{}, apiError("read social provider", response.StatusCode())
+	if err != nil {
+		return infer.ReadResponse[SocialProviderArgs, SocialProviderState]{}, requestError("read social provider", err)
 	}
-	state := socialProviderState(response.JSON200.Data, req.State.Config)
+	if response.Data.ID != id || response.Data.Realm != realm {
+		return infer.ReadResponse[SocialProviderArgs, SocialProviderState]{}, apiError("read social provider", http.StatusOK)
+	}
+	state := socialProviderState(response.Data, req.State.Config)
 	return infer.ReadResponse[SocialProviderArgs, SocialProviderState]{ID: req.ID, Inputs: state.SocialProviderArgs, State: state}, nil
 }
 
@@ -185,12 +185,9 @@ func (SocialProvider) Delete(ctx context.Context, req infer.DeleteRequest[Social
 	if err != nil {
 		return infer.DeleteResponse{}, err
 	}
-	response, err := infer.GetConfig[Config](ctx).socialProviders.V1RealmsSocialProvidersDestroyWithResponse(ctx, realm, id)
-	if err != nil {
-		return infer.DeleteResponse{}, err
-	}
-	if response.StatusCode() != http.StatusNoContent && response.StatusCode() != http.StatusNotFound {
-		return infer.DeleteResponse{}, apiError("delete social provider", response.StatusCode())
+	_, err = infer.GetConfig[Config](ctx).socialProviders.DeleteSocialProvider(ctx, realm, id)
+	if err != nil && !isNotFound(err) {
+		return infer.DeleteResponse{}, requestError("delete social provider", err)
 	}
 	return infer.DeleteResponse{}, nil
 }
@@ -203,8 +200,8 @@ func socialProviderParts(id string) (string, string, error) {
 	return realm, provider, nil
 }
 
-func socialCredentials(config SocialProviderConfig) lock.SocialProviderCredentialsData {
-	data := lock.SocialProviderCredentialsData{ClientID: &config.ClientID, Issuer: config.Issuer, TeamID: config.TeamID, KeyID: config.KeyID}
+func socialCredentials(config SocialProviderConfig) management.SocialProviderCredentialsData {
+	data := management.SocialProviderCredentialsData{ClientID: &config.ClientID, Issuer: config.Issuer, TeamID: config.TeamID, KeyID: config.KeyID}
 	if config.ClientSecret != nil && strings.TrimSpace(*config.ClientSecret) != "" {
 		data.ClientSecret = nullable.NewNullableWithValue(*config.ClientSecret)
 	}
@@ -233,7 +230,7 @@ func retainSocialConfig(next, old SocialProviderConfig) SocialProviderConfig {
 	return next
 }
 
-func socialProviderState(data lock.SocialProviderData, known SocialProviderConfig) SocialProviderState {
+func socialProviderState(data management.SocialProviderData, known SocialProviderConfig) SocialProviderState {
 	config := SocialProviderConfig{ClientID: data.Config.ClientID, Issuer: data.Config.Issuer, TeamID: data.Config.TeamID, KeyID: data.Config.KeyID}
 	if data.Driver == "apple" {
 		config.PrivateKey = known.PrivateKey

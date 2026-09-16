@@ -7,7 +7,7 @@ require (
 	github.com/oapi-codegen/nullable v1.2.0
 	github.com/pulumi/pulumi-go-provider v1.6.0
 	github.com/pulumi/pulumi/sdk/v3 v3.261.0
-	github.com/use-lock/client-go v0.0.0-20260915151844-6ccabc3c894f
+	github.com/use-lock/client-go v0.0.0-20260916123248-547a1b11044c
 )
 
 require (

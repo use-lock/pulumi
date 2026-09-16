@@ -8,7 +8,7 @@ import (
 
 	"github.com/oapi-codegen/nullable"
 	"github.com/pulumi/pulumi-go-provider/infer"
-	lock "github.com/use-lock/client-go"
+	"github.com/use-lock/client-go/management"
 )
 
 type Client struct{}
@@ -81,23 +81,23 @@ func (Client) Create(ctx context.Context, req infer.CreateRequest[ClientArgs]) (
 		return infer.CreateResponse[ClientState]{Output: ClientState{ClientArgs: req.Inputs}}, nil
 	}
 	args := req.Inputs
-	grants := make([]lock.CreateClientDataGrantTypes, len(args.GrantTypes))
+	grants := make([]management.CreateClientDataGrantTypes, len(args.GrantTypes))
 	for i, grant := range args.GrantTypes {
-		grants[i] = lock.CreateClientDataGrantTypes(grant)
+		grants[i] = management.CreateClientDataGrantTypes(grant)
 	}
 	redirects, logoutRedirects := nonNil(args.RedirectURIs), nonNil(args.PostLogoutRedirectURIs)
-	response, err := infer.GetConfig[Config](ctx).management.V1RealmsClientsStoreWithResponse(ctx, args.Realm, lock.CreateClientData{
-		Name: args.Name, TokenEndpointAuthMethod: lock.TokenEndpointAuthMethod(args.TokenEndpointAuthMethod), GrantTypes: grants,
+	response, err := infer.GetConfig[Config](ctx).management.CreateClient(ctx, args.Realm, management.CreateClientData{
+		Name: args.Name, TokenEndpointAuthMethod: management.TokenEndpointAuthMethod(args.TokenEndpointAuthMethod), GrantTypes: grants,
 		RedirectUris: &redirects, PostLogoutRedirectUris: &logoutRedirects, ConsentRequired: args.ConsentRequired,
 		BackchannelLogoutURI: logoutURI(args.BackchannelLogoutURI),
 	})
 	if err != nil {
-		return infer.CreateResponse[ClientState]{}, err
+		return infer.CreateResponse[ClientState]{}, requestError("create client", err)
 	}
-	if response.JSON201 == nil || response.JSON201.Data.Client.ClientID == "" || response.JSON201.Data.Client.Realm != args.Realm {
-		return infer.CreateResponse[ClientState]{}, apiError("create client", response.StatusCode())
+	if response.Data.Client.ClientID == "" || response.Data.Client.Realm != args.Realm {
+		return infer.CreateResponse[ClientState]{}, apiError("create client", http.StatusCreated)
 	}
-	data := response.JSON201.Data
+	data := response.Data
 	var secret *string
 	if value, err := data.Credentials.Secret.Get(); err == nil {
 		secret = &value
@@ -116,22 +116,22 @@ func (Client) Update(ctx context.Context, req infer.UpdateRequest[ClientArgs, Cl
 		return infer.UpdateResponse[ClientState]{}, err
 	}
 	args := req.Inputs
-	grants := make([]lock.UpdateClientDataGrantTypes, len(args.GrantTypes))
+	grants := make([]management.UpdateClientDataGrantTypes, len(args.GrantTypes))
 	for i, grant := range args.GrantTypes {
-		grants[i] = lock.UpdateClientDataGrantTypes(grant)
+		grants[i] = management.UpdateClientDataGrantTypes(grant)
 	}
 	redirects, logoutRedirects := nonNil(args.RedirectURIs), nonNil(args.PostLogoutRedirectURIs)
-	response, err := infer.GetConfig[Config](ctx).management.APIV1RealmsClientsUpdatePatchWithResponse(ctx, realm, id, lock.UpdateClientData{
+	response, err := infer.GetConfig[Config](ctx).management.PatchClient(ctx, realm, id, management.UpdateClientData{
 		Name: &args.Name, GrantTypes: &grants, RedirectUris: &redirects, PostLogoutRedirectUris: &logoutRedirects,
 		ConsentRequired: args.ConsentRequired, BackchannelLogoutURI: logoutURI(args.BackchannelLogoutURI),
 	})
 	if err != nil {
-		return infer.UpdateResponse[ClientState]{}, err
+		return infer.UpdateResponse[ClientState]{}, requestError("update client", err)
 	}
-	if response.JSON200 == nil || response.JSON200.Data.ClientID != id || response.JSON200.Data.Realm != realm {
-		return infer.UpdateResponse[ClientState]{}, apiError("update client", response.StatusCode())
+	if response.Data.ClientID != id || response.Data.Realm != realm {
+		return infer.UpdateResponse[ClientState]{}, apiError("update client", http.StatusOK)
 	}
-	return infer.UpdateResponse[ClientState]{Output: clientState(response.JSON200.Data, req.State.ClientSecret)}, nil
+	return infer.UpdateResponse[ClientState]{Output: clientState(response.Data, req.State.ClientSecret)}, nil
 }
 
 func (Client) Read(ctx context.Context, req infer.ReadRequest[ClientArgs, ClientState]) (infer.ReadResponse[ClientArgs, ClientState], error) {
@@ -139,17 +139,17 @@ func (Client) Read(ctx context.Context, req infer.ReadRequest[ClientArgs, Client
 	if err != nil {
 		return infer.ReadResponse[ClientArgs, ClientState]{}, err
 	}
-	response, err := infer.GetConfig[Config](ctx).management.V1RealmsClientsShowWithResponse(ctx, realm, id)
-	if err != nil {
-		return infer.ReadResponse[ClientArgs, ClientState]{}, err
-	}
-	if response.StatusCode() == http.StatusNotFound {
+	response, err := infer.GetConfig[Config](ctx).management.GetClient(ctx, realm, id)
+	if isNotFound(err) {
 		return infer.ReadResponse[ClientArgs, ClientState]{}, nil
 	}
-	if response.JSON200 == nil || response.JSON200.Data.ClientID != id || response.JSON200.Data.Realm != realm {
-		return infer.ReadResponse[ClientArgs, ClientState]{}, apiError("read client", response.StatusCode())
+	if err != nil {
+		return infer.ReadResponse[ClientArgs, ClientState]{}, requestError("read client", err)
 	}
-	state := clientState(response.JSON200.Data, req.State.ClientSecret)
+	if response.Data.ClientID != id || response.Data.Realm != realm {
+		return infer.ReadResponse[ClientArgs, ClientState]{}, apiError("read client", http.StatusOK)
+	}
+	state := clientState(response.Data, req.State.ClientSecret)
 	return infer.ReadResponse[ClientArgs, ClientState]{ID: req.ID, Inputs: state.ClientArgs, State: state}, nil
 }
 
@@ -158,17 +158,14 @@ func (Client) Delete(ctx context.Context, req infer.DeleteRequest[ClientState]) 
 	if err != nil {
 		return infer.DeleteResponse{}, err
 	}
-	response, err := infer.GetConfig[Config](ctx).management.V1RealmsClientsDestroyWithResponse(ctx, realm, id)
-	if err != nil {
-		return infer.DeleteResponse{}, err
-	}
-	if response.StatusCode() != http.StatusNoContent && response.StatusCode() != http.StatusNotFound {
-		return infer.DeleteResponse{}, apiError("delete client", response.StatusCode())
+	_, err = infer.GetConfig[Config](ctx).management.DeleteClient(ctx, realm, id)
+	if err != nil && !isNotFound(err) {
+		return infer.DeleteResponse{}, requestError("delete client", err)
 	}
 	return infer.DeleteResponse{}, nil
 }
 
-func clientState(data lock.ClientData, secret *string) ClientState {
+func clientState(data management.ClientData, secret *string) ClientState {
 	grants := make([]GrantType, len(data.GrantTypes))
 	for i, grant := range data.GrantTypes {
 		grants[i] = GrantType(grant)

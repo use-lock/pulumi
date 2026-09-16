@@ -51,10 +51,10 @@ func TestAdditionalResourceTypesUseTheirOwnScopedTokens(t *testing.T) {
 		t.Fatal("configuration eagerly fetched tokens")
 	}
 	for range 2 {
-		if _, err := config.resources.V1RealmsResourcesShowWithResponse(t.Context(), "staging", "resource-id"); err != nil {
+		if _, err := config.resources.GetResource(t.Context(), "staging", "resource-id"); !isNotFound(err) {
 			t.Fatal(err)
 		}
-		if _, err := config.socialProviders.V1RealmsSocialProvidersShowWithResponse(t.Context(), "staging", "provider-id"); err != nil {
+		if _, err := config.socialProviders.GetSocialProvider(t.Context(), "staging", "provider-id"); !isNotFound(err) {
 			t.Fatal(err)
 		}
 	}

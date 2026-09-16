@@ -10,7 +10,7 @@ import (
 
 	"github.com/oapi-codegen/nullable"
 	"github.com/pulumi/pulumi-go-provider/infer"
-	lock "github.com/use-lock/client-go"
+	"github.com/use-lock/client-go/management"
 )
 
 type ProtectedResource struct{}
@@ -58,18 +58,18 @@ func (ProtectedResource) Create(ctx context.Context, req infer.CreateRequest[Pro
 		return infer.CreateResponse[ProtectedResourceState]{Output: ProtectedResourceState{ProtectedResourceArgs: req.Inputs}}, nil
 	}
 	args := req.Inputs
-	scopes := make([]lock.CreateResourceScopeData, 0, len(args.Scopes))
+	scopes := make([]management.CreateResourceScopeData, 0, len(args.Scopes))
 	for _, value := range slices.Sorted(maps.Keys(args.Scopes)) {
-		scopes = append(scopes, lock.CreateResourceScopeData{Value: value, Description: scopeDescription(args.Scopes[value].Description)})
+		scopes = append(scopes, management.CreateResourceScopeData{Value: value, Description: scopeDescription(args.Scopes[value].Description)})
 	}
-	response, err := infer.GetConfig[Config](ctx).resources.V1RealmsResourcesStoreWithResponse(ctx, args.Realm, lock.CreateResourceData{Identifier: args.Identifier, Name: args.Name, Scopes: &scopes})
+	response, err := infer.GetConfig[Config](ctx).resources.CreateResource(ctx, args.Realm, management.CreateResourceData{Identifier: args.Identifier, Name: args.Name, Scopes: &scopes})
 	if err != nil {
-		return infer.CreateResponse[ProtectedResourceState]{}, err
+		return infer.CreateResponse[ProtectedResourceState]{}, requestError("create protected resource", err)
 	}
-	if response.JSON201 == nil || response.JSON201.Data.ID == "" || response.JSON201.Data.Realm != args.Realm {
-		return infer.CreateResponse[ProtectedResourceState]{}, apiError("create protected resource", response.StatusCode())
+	if response.Data.ID == "" || response.Data.Realm != args.Realm {
+		return infer.CreateResponse[ProtectedResourceState]{}, apiError("create protected resource", http.StatusCreated)
 	}
-	data := response.JSON201.Data
+	data := response.Data
 	return infer.CreateResponse[ProtectedResourceState]{ID: args.Realm + "/" + data.ID, Output: protectedResourceState(data)}, nil
 }
 
@@ -82,32 +82,32 @@ func (ProtectedResource) Update(ctx context.Context, req infer.UpdateRequest[Pro
 		return infer.UpdateResponse[ProtectedResourceState]{}, err
 	}
 	client := infer.GetConfig[Config](ctx).resources
-	current, err := client.V1RealmsResourcesShowWithResponse(ctx, realm, id)
+	current, err := client.GetResource(ctx, realm, id)
 	if err != nil {
-		return infer.UpdateResponse[ProtectedResourceState]{}, err
+		return infer.UpdateResponse[ProtectedResourceState]{}, requestError("update protected resource", err)
 	}
-	if current.JSON200 == nil || current.JSON200.Data.ID != id || current.JSON200.Data.Realm != realm {
-		return infer.UpdateResponse[ProtectedResourceState]{}, apiError("read protected resource before update", current.StatusCode())
+	if current.Data.ID != id || current.Data.Realm != realm {
+		return infer.UpdateResponse[ProtectedResourceState]{}, apiError("read protected resource before update", http.StatusOK)
 	}
 	args := req.Inputs
-	scopes := make([]lock.ResourceScopeChangeData, 0, len(args.Scopes)+len(current.JSON200.Data.Scopes))
+	scopes := make([]management.ResourceScopeChangeData, 0, len(args.Scopes)+len(current.Data.Scopes))
 	for _, value := range slices.Sorted(maps.Keys(args.Scopes)) {
-		scopes = append(scopes, lock.ResourceScopeChangeData{Value: value, Description: scopeDescription(args.Scopes[value].Description)})
+		scopes = append(scopes, management.ResourceScopeChangeData{Value: value, Description: scopeDescription(args.Scopes[value].Description)})
 	}
-	for _, scope := range current.JSON200.Data.Scopes {
+	for _, scope := range current.Data.Scopes {
 		if _, desired := args.Scopes[scope.Value]; !desired {
 			remove := true
-			scopes = append(scopes, lock.ResourceScopeChangeData{Value: scope.Value, Delete: &remove})
+			scopes = append(scopes, management.ResourceScopeChangeData{Value: scope.Value, Delete: &remove})
 		}
 	}
-	response, err := client.APIV1RealmsResourcesUpdatePatchWithResponse(ctx, realm, id, lock.UpdateResourceData{Identifier: &args.Identifier, Name: &args.Name, Scopes: &scopes})
+	response, err := client.PatchResource(ctx, realm, id, management.UpdateResourceData{Identifier: &args.Identifier, Name: &args.Name, Scopes: &scopes})
 	if err != nil {
-		return infer.UpdateResponse[ProtectedResourceState]{}, err
+		return infer.UpdateResponse[ProtectedResourceState]{}, requestError("update protected resource", err)
 	}
-	if response.JSON200 == nil || response.JSON200.Data.ID != id || response.JSON200.Data.Realm != realm {
-		return infer.UpdateResponse[ProtectedResourceState]{}, apiError("update protected resource", response.StatusCode())
+	if response.Data.ID != id || response.Data.Realm != realm {
+		return infer.UpdateResponse[ProtectedResourceState]{}, apiError("update protected resource", http.StatusOK)
 	}
-	return infer.UpdateResponse[ProtectedResourceState]{Output: protectedResourceState(response.JSON200.Data)}, nil
+	return infer.UpdateResponse[ProtectedResourceState]{Output: protectedResourceState(response.Data)}, nil
 }
 
 func (ProtectedResource) Read(ctx context.Context, req infer.ReadRequest[ProtectedResourceArgs, ProtectedResourceState]) (infer.ReadResponse[ProtectedResourceArgs, ProtectedResourceState], error) {
@@ -115,17 +115,17 @@ func (ProtectedResource) Read(ctx context.Context, req infer.ReadRequest[Protect
 	if err != nil {
 		return infer.ReadResponse[ProtectedResourceArgs, ProtectedResourceState]{}, err
 	}
-	response, err := infer.GetConfig[Config](ctx).resources.V1RealmsResourcesShowWithResponse(ctx, realm, id)
-	if err != nil {
-		return infer.ReadResponse[ProtectedResourceArgs, ProtectedResourceState]{}, err
-	}
-	if response.StatusCode() == http.StatusNotFound {
+	response, err := infer.GetConfig[Config](ctx).resources.GetResource(ctx, realm, id)
+	if isNotFound(err) {
 		return infer.ReadResponse[ProtectedResourceArgs, ProtectedResourceState]{}, nil
 	}
-	if response.JSON200 == nil || response.JSON200.Data.ID != id || response.JSON200.Data.Realm != realm {
-		return infer.ReadResponse[ProtectedResourceArgs, ProtectedResourceState]{}, apiError("read protected resource", response.StatusCode())
+	if err != nil {
+		return infer.ReadResponse[ProtectedResourceArgs, ProtectedResourceState]{}, requestError("read protected resource", err)
 	}
-	state := protectedResourceState(response.JSON200.Data)
+	if response.Data.ID != id || response.Data.Realm != realm {
+		return infer.ReadResponse[ProtectedResourceArgs, ProtectedResourceState]{}, apiError("read protected resource", http.StatusOK)
+	}
+	state := protectedResourceState(response.Data)
 	return infer.ReadResponse[ProtectedResourceArgs, ProtectedResourceState]{ID: req.ID, Inputs: state.ProtectedResourceArgs, State: state}, nil
 }
 
@@ -134,17 +134,14 @@ func (ProtectedResource) Delete(ctx context.Context, req infer.DeleteRequest[Pro
 	if err != nil {
 		return infer.DeleteResponse{}, err
 	}
-	response, err := infer.GetConfig[Config](ctx).resources.V1RealmsResourcesDestroyWithResponse(ctx, realm, id)
-	if err != nil {
-		return infer.DeleteResponse{}, err
-	}
-	if response.StatusCode() != http.StatusNoContent && response.StatusCode() != http.StatusNotFound {
-		return infer.DeleteResponse{}, apiError("delete protected resource", response.StatusCode())
+	_, err = infer.GetConfig[Config](ctx).resources.DeleteResource(ctx, realm, id)
+	if err != nil && !isNotFound(err) {
+		return infer.DeleteResponse{}, requestError("delete protected resource", err)
 	}
 	return infer.DeleteResponse{}, nil
 }
 
-func protectedResourceState(data lock.ResourceData) ProtectedResourceState {
+func protectedResourceState(data management.ResourceData) ProtectedResourceState {
 	scopes := make(map[string]ScopeArgs, len(data.Scopes))
 	for _, scope := range data.Scopes {
 		args := ScopeArgs{}

@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/pulumi/pulumi-go-provider/infer"
-	lock "github.com/use-lock/client-go"
+	"github.com/use-lock/client-go/admin"
+	"github.com/use-lock/client-go/management"
 )
 
 type Config struct {
@@ -21,10 +22,10 @@ type Config struct {
 	ClientSecret            string `pulumi:"clientSecret,optional" provider:"secret"`
 	TokenEndpointAuthMethod string `pulumi:"tokenEndpointAuthMethod,optional"`
 
-	admin           *lock.ClientWithResponses
-	management      *lock.ClientWithResponses
-	resources       *lock.ClientWithResponses
-	socialProviders *lock.ClientWithResponses
+	admin           *admin.Client
+	management      *management.Client
+	resources       *management.Client
+	socialProviders *management.Client
 }
 
 func (c *Config) Annotate(a infer.Annotator) {
@@ -74,7 +75,11 @@ func (c *Config) Configure(_ context.Context) error {
 	if adminToken == "" {
 		adminToken = c.AccessToken
 	}
-	c.admin, err = c.apiClient(httpClient, adminToken, c.BaseURL+"/admin-api", "realms:read realms:write")
+	adminEditor, err := c.requestEditor(httpClient, adminToken, c.BaseURL+"/admin-api", "realms:read realms:write")
+	if err != nil {
+		return err
+	}
+	c.admin, err = admin.NewClient(c.BaseURL+"/api", admin.WithHTTPClient(httpClient), admin.WithRequestEditorFn(adminEditor))
 	if err != nil {
 		return err
 	}
@@ -90,8 +95,16 @@ func (c *Config) Configure(_ context.Context) error {
 	return err
 }
 
-func (c *Config) apiClient(httpClient *http.Client, token, audience, scopes string) (*lock.ClientWithResponses, error) {
-	var editor lock.RequestEditorFn
+func (c *Config) apiClient(httpClient *http.Client, token, audience, scopes string) (*management.Client, error) {
+	editor, err := c.requestEditor(httpClient, token, audience, scopes)
+	if err != nil {
+		return nil, err
+	}
+	return management.NewClient(c.BaseURL+"/api", management.WithHTTPClient(httpClient), management.WithRequestEditorFn(editor))
+}
+
+func (c *Config) requestEditor(httpClient *http.Client, token, audience, scopes string) (func(context.Context, *http.Request) error, error) {
+	var editor func(context.Context, *http.Request) error
 	if token != "" {
 		editor = func(_ context.Context, req *http.Request) error {
 			req.Header.Set("Authorization", "Bearer "+token)
@@ -104,7 +117,7 @@ func (c *Config) apiClient(httpClient *http.Client, token, audience, scopes stri
 		}
 		editor = source.authorize
 	}
-	return lock.NewClientWithResponses(c.BaseURL+"/api", lock.WithHTTPClient(httpClient), lock.WithRequestEditorFn(editor))
+	return editor, nil
 }
 
 func configValue(value, env string) string {

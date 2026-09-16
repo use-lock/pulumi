@@ -81,10 +81,10 @@ func TestOAuthCredentialsAudienceAndTokenReuse(t *testing.T) {
 			var group sync.WaitGroup
 			for range 8 {
 				group.Go(func() {
-					if _, err := config.admin.V1RealmsShowWithResponse(t.Context(), "staging"); err != nil {
+					if _, err := config.admin.GetRealm(t.Context(), "staging"); !isNotFound(err) {
 						t.Error(err)
 					}
-					if _, err := config.management.V1RealmsClientsShowWithResponse(t.Context(), "staging", "client"); err != nil {
+					if _, err := config.management.GetClient(t.Context(), "staging", "client"); !isNotFound(err) {
 						t.Error(err)
 					}
 				})
@@ -179,10 +179,10 @@ func TestConfigEnvironmentAndSeparateAccessTokens(t *testing.T) {
 	if err := config.Configure(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := config.admin.V1RealmsShowWithResponse(t.Context(), "staging"); err != nil {
+	if _, err := config.admin.GetRealm(t.Context(), "staging"); !isNotFound(err) {
 		t.Fatal(err)
 	}
-	if _, err := config.management.V1RealmsClientsShowWithResponse(t.Context(), "staging", "client"); err != nil {
+	if _, err := config.management.GetClient(t.Context(), "staging", "client"); !isNotFound(err) {
 		t.Fatal(err)
 	}
 }
