@@ -155,7 +155,7 @@ Release Please opens the version PR. Merging it creates the tag and starts the r
 
 Configure `RELEASE_PLEASE_TOKEN` for the release automation and `NPM_TOKEN` with permission to publish `@use-lock/pulumi`. The npm token must support non-interactive publishing under the organization's policy. The release checks npm authentication before building and fails if the token is missing or invalid.
 
-For the first release, publish `client-go` first. The provider currently uses a pinned client commit; it can be updated to the release tag afterward without requiring a local checkout of the client.
+When updating the Go client, publish its release first, then update the version in `go.mod` before releasing the provider.
 
 ## License
 
