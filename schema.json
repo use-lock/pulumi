@@ -3,6 +3,7 @@
   "displayName": "Lock",
   "version": "0.1.0",
   "description": "Manage Lock realms, realm policies, OAuth clients, protected APIs with scopes, and social login providers.",
+  "license": "MIT",
   "repository": "https://github.com/use-lock/pulumi",
   "pluginDownloadURL": "https://github.com/use-lock/pulumi/releases/download/v$%7BVERSION%7D",
   "publisher": "use-lock",

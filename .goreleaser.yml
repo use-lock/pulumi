@@ -29,6 +29,8 @@ archives:
     name_template: "pulumi-resource-lock-v{{ .Env.PLUGIN_VERSION }}-{{ .Os }}-{{ .Arch }}"
     files:
       - pulumi-plugin.json
+      - README.md
+      - LICENSE
 
 checksum:
   name_template: "SHA256SUMS.txt"

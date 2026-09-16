@@ -1,0 +1,24 @@
+name: lock-typescript
+runtime: nodejs
+description: Manage Lock realms, clients, API scopes, and social login with TypeScript.
+
+plugins:
+  providers:
+    - name: lock
+      path: ../../bin
+
+config:
+  baseUrl:
+    type: string
+  clientId:
+    type: string
+  clientSecret:
+    type: string
+    secret: true
+  realmDomain:
+    type: string
+  googleClientId:
+    type: string
+  googleClientSecret:
+    type: string
+    secret: true

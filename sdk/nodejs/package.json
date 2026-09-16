@@ -5,6 +5,7 @@
     "type": "git",
     "url": "git+https://github.com/use-lock/pulumi.git"
   },
+  "license": "MIT",
   "scripts": {
     "build": "tsc"
   },

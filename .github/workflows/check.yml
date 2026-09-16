@@ -24,6 +24,12 @@ jobs:
         with:
           version: v2.13.2
 
+      - name: Check release configuration
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: v2.18.1
+          args: check
+
       - name: Test
         run: make check
 
@@ -60,3 +66,15 @@ jobs:
           cache: npm
           cache-dependency-path: sdk/nodejs/package-lock.json
       - run: make build-sdk
+      - name: Check npm package metadata and documentation
+        run: |
+          cmp README.md sdk/nodejs/bin/README.md
+          cmp LICENSE sdk/nodejs/bin/LICENSE
+          node -e 'const assert = require("node:assert/strict"); const pkg = require("./sdk/nodejs/bin/package.json"); assert.equal(pkg.license, "MIT");'
+          cd sdk/nodejs/bin
+          npm pack --dry-run
+      - name: Check TypeScript example
+        working-directory: examples/typescript
+        run: |
+          npm ci --no-audit --no-fund
+          npm run check

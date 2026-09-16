@@ -16,6 +16,7 @@ func New() (p.Provider, error) {
 		WithDisplayName("Lock").
 		WithDescription("Manage Lock realms, realm policies, OAuth clients, protected APIs with scopes, and social login providers.").
 		WithPublisher("use-lock").
+		WithLicense("MIT").
 		WithRepository("https://github.com/use-lock/pulumi").
 		WithPluginDownloadURL("https://github.com/use-lock/pulumi/releases/download/v$%7BVERSION%7D").
 		Build()

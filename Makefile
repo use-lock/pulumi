@@ -27,5 +27,5 @@ gen-sdk: build
 
 build-sdk:
 	cd $(SDK_DIR) && npm ci --no-audit --no-fund && npm run build
-	cp $(SDK_DIR)/package.json $(SDK_DIR)/README.md $(SDK_DIR)/bin/
+	cp $(SDK_DIR)/package.json README.md LICENSE $(SDK_DIR)/bin/
 	cd $(SDK_DIR)/bin && node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.version='$(VERSION)';p.pulumi.version='$(VERSION)';delete p.scripts.prepare;delete p.devDependencies;fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"

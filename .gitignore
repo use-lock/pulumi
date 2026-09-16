@@ -9,3 +9,4 @@ Pulumi.*.yaml
 !Pulumi.yaml
 sdk/nodejs/node_modules/
 sdk/nodejs/bin/
+examples/typescript/node_modules/
