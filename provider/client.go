@@ -121,7 +121,7 @@ func (Client) Update(ctx context.Context, req infer.UpdateRequest[ClientArgs, Cl
 		grants[i] = management.UpdateClientDataGrantTypes(grant)
 	}
 	redirects, logoutRedirects := nonNil(args.RedirectURIs), nonNil(args.PostLogoutRedirectURIs)
-	response, err := infer.GetConfig[Config](ctx).management.PatchClient(ctx, realm, id, management.UpdateClientData{
+	response, err := infer.GetConfig[Config](ctx).management.UpdateClient(ctx, realm, id, management.UpdateClientData{
 		Name: &args.Name, GrantTypes: &grants, RedirectUris: &redirects, PostLogoutRedirectUris: &logoutRedirects,
 		ConsentRequired: args.ConsentRequired, BackchannelLogoutURI: logoutURI(args.BackchannelLogoutURI),
 	})

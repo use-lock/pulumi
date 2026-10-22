@@ -100,7 +100,7 @@ func (ProtectedResource) Update(ctx context.Context, req infer.UpdateRequest[Pro
 			scopes = append(scopes, management.ResourceScopeChangeData{Value: scope.Value, Delete: &remove})
 		}
 	}
-	response, err := client.PatchResource(ctx, realm, id, management.UpdateResourceData{Identifier: &args.Identifier, Name: &args.Name, Scopes: &scopes})
+	response, err := client.UpdateResource(ctx, realm, id, management.UpdateResourceData{Identifier: &args.Identifier, Name: &args.Name, Scopes: &scopes})
 	if err != nil {
 		return infer.UpdateResponse[ProtectedResourceState]{}, requestError("update protected resource", err)
 	}

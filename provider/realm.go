@@ -86,7 +86,7 @@ func (Realm) Update(ctx context.Context, req infer.UpdateRequest[RealmArgs, Real
 		return infer.UpdateResponse[RealmState]{}, err
 	}
 	client := infer.GetConfig[Config](ctx).admin
-	request, err := admin.NewPatchRealmRequestWithBody(client.Server, req.ID, "application/json", bytes.NewReader(body))
+	request, err := admin.NewUpdateRealmRequestWithBody(client.Server, req.ID, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return infer.UpdateResponse[RealmState]{}, err
 	}
