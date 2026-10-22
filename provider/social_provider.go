@@ -151,7 +151,7 @@ func (SocialProvider) Update(ctx context.Context, req infer.UpdateRequest[Social
 		return infer.UpdateResponse[SocialProviderState]{}, err
 	}
 	credentials := socialCredentials(req.Inputs.Config)
-	response, err := infer.GetConfig[Config](ctx).socialProviders.PatchSocialProvider(ctx, realm, id, management.UpdateSocialProviderData{Enabled: &req.Inputs.Enabled, Config: &credentials})
+	response, err := infer.GetConfig[Config](ctx).socialProviders.UpdateSocialProvider(ctx, realm, id, management.UpdateSocialProviderData{Enabled: &req.Inputs.Enabled, Config: &credentials})
 	if err != nil {
 		return infer.UpdateResponse[SocialProviderState]{}, requestError("update social provider", err)
 	}
