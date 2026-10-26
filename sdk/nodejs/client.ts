@@ -38,7 +38,7 @@ export class Client extends pulumi.CustomResource {
     }
 
     /**
-     * RFC 8707 resources the client may request tokens for. Each entry is exactly the `resource` value the client sends and the `aud` its token then carries: the realm issuer, or a protected resource's identifier resolved against it. A path-relative identifier such as `/docpipe` becomes `{issuer}/docpipe`; an absolute identifier is used as is. Lock rejects entries that are not audiences of the realm. Omit or set an empty list to clear it.
+     * RFC 8707 resources the client may request tokens for. Each entry is exactly the `resource` value the client sends and the `aud` its token then carries: the realm issuer, or a protected resource's identifier resolved against it. A relative identifier, a bare path segment such as `docpipe`, becomes `{issuer}/docpipe`; an absolute identifier is used as is. Lock rejects entries that are not audiences of the realm. Omit or set an empty list to clear it.
      */
     declare public readonly allowedAudiences: pulumi.Output<string[] | undefined>;
     /**
@@ -131,7 +131,7 @@ export class Client extends pulumi.CustomResource {
  */
 export interface ClientArgs {
     /**
-     * RFC 8707 resources the client may request tokens for. Each entry is exactly the `resource` value the client sends and the `aud` its token then carries: the realm issuer, or a protected resource's identifier resolved against it. A path-relative identifier such as `/docpipe` becomes `{issuer}/docpipe`; an absolute identifier is used as is. Lock rejects entries that are not audiences of the realm. Omit or set an empty list to clear it.
+     * RFC 8707 resources the client may request tokens for. Each entry is exactly the `resource` value the client sends and the `aud` its token then carries: the realm issuer, or a protected resource's identifier resolved against it. A relative identifier, a bare path segment such as `docpipe`, becomes `{issuer}/docpipe`; an absolute identifier is used as is. Lock rejects entries that are not audiences of the realm. Omit or set an empty list to clear it.
      */
     allowedAudiences?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**

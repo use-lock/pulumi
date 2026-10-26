@@ -23,7 +23,7 @@ const realm = new lock.Realm("realm", {
 
 const invoicesApi = new lock.ProtectedResource("invoices-api", {
     realm: realm.slug,
-    identifier: "/invoices-api",
+    identifier: "invoices-api",
     name: "Invoices API",
     scopes: {
         "invoices:read": { description: "Read invoices" },
@@ -31,9 +31,9 @@ const invoicesApi = new lock.ProtectedResource("invoices-api", {
     },
 }, { provider });
 
-// A path-relative identifier is addressed under the realm issuer; the client
-// sends this exact value as `resource` and its token carries it as `aud`.
-const invoicesApiAudience = pulumi.interpolate`${realm.issuer}${invoicesApi.identifier}`;
+// A relative identifier is addressed under the realm issuer; the client sends
+// this exact value as `resource` and its token carries it as `aud`.
+const invoicesApiAudience = pulumi.interpolate`${realm.issuer}/${invoicesApi.identifier}`;
 
 const serviceClient = new lock.Client("service-client", {
     realm: realm.slug,

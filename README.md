@@ -69,7 +69,7 @@ By default a client-credentials token is addressed to the realm issuer. To bind 
 ```typescript
 const docpipe = new lock.ProtectedResource("docpipe", {
     realm: realm.slug,
-    identifier: "/docpipe",
+    identifier: "docpipe",
     name: "Docpipe",
     scopes: {
         "documents:read": { description: "Read documents" },
@@ -82,7 +82,7 @@ const worker = new lock.Client("docpipe-worker", {
     tokenEndpointAuthMethod: "client_secret_basic",
     grantTypes: ["client_credentials"],
     consentRequired: false,
-    allowedAudiences: [pulumi.interpolate`${realm.issuer}${docpipe.identifier}`],
+    allowedAudiences: [pulumi.interpolate`${realm.issuer}/${docpipe.identifier}`],
 }, { provider });
 ```
 
@@ -90,10 +90,10 @@ An audience is spelled exactly as the client requests it:
 
 | `ProtectedResource` identifier | Allowed audience, `resource` and `aud` (issuer `https://lock.example`) |
 | --- | --- |
-| `/docpipe` (path-relative) | `https://lock.example/docpipe` |
+| `docpipe` (relative, a bare path segment) | `https://lock.example/docpipe` |
 | `https://docpipe.example` (absolute) | `https://docpipe.example` |
 
-The realm issuer itself is also a valid audience. Lock rejects an entry that is neither the issuer nor a registered resource of the realm, so declare the `ProtectedResource` in the same program; referencing its outputs orders the two correctly. A client may still hold an audience whose resource was deleted later. Lock compares values as exact strings: keep the leading slash on a path-relative identifier when interpolating it, add no trailing slash, and list each audience once.
+The realm issuer itself is also a valid audience. Lock rejects an entry that is neither the issuer nor a registered resource of the realm, so declare the `ProtectedResource` in the same program; referencing its outputs orders the two correctly. A client may still hold an audience whose resource was deleted later. Lock compares values as exact strings: a relative identifier has no leading slash (Lock rejects one), so join it to the issuer with a single `/`; add no trailing slash, and list each audience once.
 
 ## Authentication
 
