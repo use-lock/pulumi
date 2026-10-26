@@ -38,6 +38,10 @@ export class Client extends pulumi.CustomResource {
     }
 
     /**
+     * RFC 8707 resources the client may request tokens for. Each entry is exactly the `resource` value the client sends and the `aud` its token then carries: the realm issuer, or a protected resource's identifier resolved against it. A path-relative identifier such as `/docpipe` becomes `{issuer}/docpipe`; an absolute identifier is used as is. Lock rejects entries that are not audiences of the realm. Omit or set an empty list to clear it.
+     */
+    declare public readonly allowedAudiences: pulumi.Output<string[] | undefined>;
+    /**
      * Back-channel logout endpoint. Omit or set an empty string to clear it.
      */
     declare public readonly backchannelLogoutUri: pulumi.Output<string | undefined>;
@@ -83,6 +87,7 @@ export class Client extends pulumi.CustomResource {
             if (args?.tokenEndpointAuthMethod === undefined && !opts.urn) {
                 throw new Error("Missing required property 'tokenEndpointAuthMethod'");
             }
+            resourceInputs["allowedAudiences"] = args?.allowedAudiences;
             resourceInputs["backchannelLogoutUri"] = args?.backchannelLogoutUri;
             resourceInputs["consentRequired"] = (args?.consentRequired) ?? true;
             resourceInputs["grantTypes"] = args?.grantTypes;
@@ -97,6 +102,7 @@ export class Client extends pulumi.CustomResource {
             resourceInputs["revoked"] = undefined /*out*/;
             resourceInputs["scopes"] = undefined /*out*/;
         } else {
+            resourceInputs["allowedAudiences"] = undefined /*out*/;
             resourceInputs["backchannelLogoutUri"] = undefined /*out*/;
             resourceInputs["clientId"] = undefined /*out*/;
             resourceInputs["clientSecret"] = undefined /*out*/;
@@ -124,6 +130,10 @@ export class Client extends pulumi.CustomResource {
  * The set of arguments for constructing a Client resource.
  */
 export interface ClientArgs {
+    /**
+     * RFC 8707 resources the client may request tokens for. Each entry is exactly the `resource` value the client sends and the `aud` its token then carries: the realm issuer, or a protected resource's identifier resolved against it. A path-relative identifier such as `/docpipe` becomes `{issuer}/docpipe`; an absolute identifier is used as is. Lock rejects entries that are not audiences of the realm. Omit or set an empty list to clear it.
+     */
+    allowedAudiences?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Back-channel logout endpoint. Omit or set an empty string to clear it.
      */

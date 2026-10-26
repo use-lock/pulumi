@@ -11,7 +11,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/property"
 )
 
-const clientJSON = `{"client_id":"client-123","realm":"staging","name":"Service","token_endpoint_auth_method":"client_secret_basic","grant_types":["client_credentials"],"redirect_uris":[],"post_logout_redirect_uris":[],"consent_required":false,"backchannel_logout_uri":null,"confidential":true,"scopes":["openid"],"revoked":false}`
+const clientJSON = `{"client_id":"client-123","realm":"staging","name":"Service","token_endpoint_auth_method":"client_secret_basic","grant_types":["client_credentials"],"redirect_uris":[],"post_logout_redirect_uris":[],"consent_required":false,"backchannel_logout_uri":null,"confidential":true,"scopes":["openid"],"revoked":false,"allowed_audiences":["https://staging.example/docpipe","https://docpipe.example"]}`
 
 func clientInputs() property.Map {
 	return property.NewMap(map[string]property.Value{
@@ -19,7 +19,21 @@ func clientInputs() property.Map {
 		"tokenEndpointAuthMethod": property.New("client_secret_basic"),
 		"grantTypes":              property.New(property.NewArray([]property.Value{property.New("client_credentials")})),
 		"consentRequired":         property.New(false),
+		"allowedAudiences": property.New(property.NewArray([]property.Value{
+			property.New("https://staging.example/docpipe"), property.New("https://docpipe.example"),
+		})),
 	})
+}
+
+func assertAllowedAudiences(t *testing.T, r *http.Request) {
+	t.Helper()
+	var body map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		t.Error(err)
+	}
+	if fmt.Sprint(body["allowed_audiences"]) != "[https://staging.example/docpipe https://docpipe.example]" {
+		t.Errorf("allowed audiences were not sent: %v", body)
+	}
 }
 
 func TestClientLifecyclePreservesSecretAndClearsOptionalFields(t *testing.T) {
@@ -32,6 +46,7 @@ func TestClientLifecyclePreservesSecretAndClearsOptionalFields(t *testing.T) {
 		}
 		switch r.Method + " " + r.URL.Path {
 		case "POST /api/v1/realms/staging/clients":
+			assertAllowedAudiences(t, r)
 			w.WriteHeader(201)
 			if _, err := fmt.Fprintf(w, `{"data":{"client":%s,"credentials":{"client_id":"client-123","secret":"created-secret"}}}`, clientJSON); err != nil {
 				t.Error(err)
@@ -56,6 +71,9 @@ func TestClientLifecyclePreservesSecretAndClearsOptionalFields(t *testing.T) {
 			}
 			if body["consent_required"] != false {
 				t.Errorf("false was not sent: %v", body)
+			}
+			if fmt.Sprint(body["allowed_audiences"]) != "[https://staging.example/docpipe https://docpipe.example]" {
+				t.Errorf("allowed audiences were not sent: %v", body)
 			}
 			if _, err := fmt.Fprintf(w, `{"data":%s}`, clientJSON); err != nil {
 				t.Error(err)
