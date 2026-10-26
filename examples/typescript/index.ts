@@ -21,14 +21,6 @@ const realm = new lock.Realm("realm", {
     },
 }, { provider });
 
-const serviceClient = new lock.Client("service-client", {
-    realm: realm.slug,
-    name: "Backend service",
-    tokenEndpointAuthMethod: "client_secret_basic",
-    grantTypes: ["client_credentials"],
-    consentRequired: false,
-}, { provider });
-
 const invoicesApi = new lock.ProtectedResource("invoices-api", {
     realm: realm.slug,
     identifier: "/invoices-api",
@@ -37,6 +29,19 @@ const invoicesApi = new lock.ProtectedResource("invoices-api", {
         "invoices:read": { description: "Read invoices" },
         "invoices:write": { description: "Create and update invoices" },
     },
+}, { provider });
+
+// A path-relative identifier is addressed under the realm issuer; the client
+// sends this exact value as `resource` and its token carries it as `aud`.
+const invoicesApiAudience = pulumi.interpolate`${realm.issuer}${invoicesApi.identifier}`;
+
+const serviceClient = new lock.Client("service-client", {
+    realm: realm.slug,
+    name: "Backend service",
+    tokenEndpointAuthMethod: "client_secret_basic",
+    grantTypes: ["client_credentials"],
+    consentRequired: false,
+    allowedAudiences: [invoicesApiAudience],
 }, { provider });
 
 const google = new lock.SocialProvider("google", {
@@ -54,4 +59,5 @@ export const issuer = realm.issuer;
 export const clientId = serviceClient.clientId;
 export const clientSecret = serviceClient.clientSecret;
 export const apiIdentifier = invoicesApi.identifier;
+export const apiAudience = invoicesApiAudience;
 export const googleCallbackUrl = google.callbackUrl;

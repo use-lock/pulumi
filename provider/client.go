@@ -42,6 +42,7 @@ type ClientArgs struct {
 	PostLogoutRedirectURIs  []string    `pulumi:"postLogoutRedirectUris,optional"`
 	ConsentRequired         *bool       `pulumi:"consentRequired,optional"`
 	BackchannelLogoutURI    string      `pulumi:"backchannelLogoutUri,optional"`
+	AllowedAudiences        []string    `pulumi:"allowedAudiences,optional"`
 }
 
 type ClientState struct {
@@ -66,6 +67,7 @@ func (r *ClientArgs) Annotate(a infer.Annotator) {
 	a.Describe(&r.Realm, "Realm slug. Changing it replaces the client.")
 	a.Describe(&r.TokenEndpointAuthMethod, "Client authentication method. Changing it replaces the client so its credentials remain consistent with Pulumi state.")
 	a.Describe(&r.BackchannelLogoutURI, "Back-channel logout endpoint. Omit or set an empty string to clear it.")
+	a.Describe(&r.AllowedAudiences, "RFC 8707 resources the client may request tokens for. Each entry is exactly the `resource` value the client sends and the `aud` its token then carries: the realm issuer, or a protected resource's identifier resolved against it. A path-relative identifier such as `/docpipe` becomes `{issuer}/docpipe`; an absolute identifier is used as is. Lock rejects entries that are not audiences of the realm. Omit or set an empty list to clear it.")
 	a.SetDefault(&r.ConsentRequired, true)
 }
 
@@ -73,6 +75,7 @@ func (Client) Check(ctx context.Context, req infer.CheckRequest) (infer.CheckRes
 	args, failures, err := infer.DefaultCheck[ClientArgs](ctx, req.NewInputs)
 	args.RedirectURIs = nonNil(args.RedirectURIs)
 	args.PostLogoutRedirectURIs = nonNil(args.PostLogoutRedirectURIs)
+	args.AllowedAudiences = nonNil(args.AllowedAudiences)
 	return infer.CheckResponse[ClientArgs]{Inputs: args, Failures: failures}, err
 }
 
@@ -85,11 +88,11 @@ func (Client) Create(ctx context.Context, req infer.CreateRequest[ClientArgs]) (
 	for i, grant := range args.GrantTypes {
 		grants[i] = management.CreateClientDataGrantTypes(grant)
 	}
-	redirects, logoutRedirects := nonNil(args.RedirectURIs), nonNil(args.PostLogoutRedirectURIs)
+	redirects, logoutRedirects, audiences := nonNil(args.RedirectURIs), nonNil(args.PostLogoutRedirectURIs), nonNil(args.AllowedAudiences)
 	response, err := infer.GetConfig[Config](ctx).management.CreateClient(ctx, args.Realm, management.CreateClientData{
 		Name: args.Name, TokenEndpointAuthMethod: management.TokenEndpointAuthMethod(args.TokenEndpointAuthMethod), GrantTypes: grants,
 		RedirectUris: &redirects, PostLogoutRedirectUris: &logoutRedirects, ConsentRequired: args.ConsentRequired,
-		BackchannelLogoutURI: logoutURI(args.BackchannelLogoutURI),
+		BackchannelLogoutURI: logoutURI(args.BackchannelLogoutURI), AllowedAudiences: &audiences,
 	})
 	if err != nil {
 		return infer.CreateResponse[ClientState]{}, requestError("create client", err)
@@ -120,10 +123,10 @@ func (Client) Update(ctx context.Context, req infer.UpdateRequest[ClientArgs, Cl
 	for i, grant := range args.GrantTypes {
 		grants[i] = management.UpdateClientDataGrantTypes(grant)
 	}
-	redirects, logoutRedirects := nonNil(args.RedirectURIs), nonNil(args.PostLogoutRedirectURIs)
+	redirects, logoutRedirects, audiences := nonNil(args.RedirectURIs), nonNil(args.PostLogoutRedirectURIs), nonNil(args.AllowedAudiences)
 	response, err := infer.GetConfig[Config](ctx).management.UpdateClient(ctx, realm, id, management.UpdateClientData{
 		Name: &args.Name, GrantTypes: &grants, RedirectUris: &redirects, PostLogoutRedirectUris: &logoutRedirects,
-		ConsentRequired: args.ConsentRequired, BackchannelLogoutURI: logoutURI(args.BackchannelLogoutURI),
+		ConsentRequired: args.ConsentRequired, BackchannelLogoutURI: logoutURI(args.BackchannelLogoutURI), AllowedAudiences: &audiences,
 	})
 	if err != nil {
 		return infer.UpdateResponse[ClientState]{}, requestError("update client", err)
@@ -177,7 +180,7 @@ func clientState(data management.ClientData, secret *string) ClientState {
 	return ClientState{
 		ClientArgs: ClientArgs{Realm: data.Realm, Name: data.Name, TokenEndpointAuthMethod: AuthMethod(data.TokenEndpointAuthMethod),
 			GrantTypes: grants, RedirectURIs: data.RedirectUris, PostLogoutRedirectURIs: data.PostLogoutRedirectUris,
-			ConsentRequired: &data.ConsentRequired, BackchannelLogoutURI: logout},
+			ConsentRequired: &data.ConsentRequired, BackchannelLogoutURI: logout, AllowedAudiences: nonNil(data.AllowedAudiences)},
 		ClientID: data.ClientID, ClientSecret: secret, Confidential: data.Confidential, Scopes: nonNil(data.Scopes), Revoked: data.Revoked,
 	}
 }
