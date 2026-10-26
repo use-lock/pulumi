@@ -3,37 +3,43 @@ name: release
 on:
   push:
     tags: ["v*"]
+  # Publishes the npm SDK of an existing release again, e.g. after a failed
+  # publish; the plugin binaries of that release are left alone.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish to npm, e.g. v0.2.0
+        required: true
 
 permissions:
   contents: write
+  # npm trusted publishing: the registry accepts this workflow's OIDC token,
+  # so no npm token is stored in the repository.
+  id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
 
+      # No registry-url: setup-node would write an .npmrc expecting a token.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
+          node-version: 24
 
-      - name: Verify npm credentials
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::error::NPM_TOKEN is required to publish @use-lock/pulumi."
-            exit 1
-          fi
-          npm whoami --registry=https://registry.npmjs.org > /dev/null
+      - name: Install npm with trusted publishing support
+        run: npm install --global npm@^11.5.1
 
       - name: Install Pulumi CLI
         run: |
@@ -41,13 +47,14 @@ jobs:
           echo "$HOME/.pulumi/bin" >> "$GITHUB_PATH"
 
       - name: Install goreleaser
+        if: github.event_name == 'push'
         uses: goreleaser/goreleaser-action@v6
         with:
           version: v2.18.1
           install-only: true
 
       - name: Set release version
-        run: echo "PLUGIN_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+        run: echo "PLUGIN_VERSION=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
 
       - name: Generate schema
         run: make schema VERSION="$PLUGIN_VERSION"
@@ -56,12 +63,11 @@ jobs:
         run: make build-sdk VERSION="$PLUGIN_VERSION"
 
       - name: Release plugin binaries
+        if: github.event_name == 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: goreleaser release --clean
 
       - name: Publish SDK to npm
         working-directory: sdk/nodejs/bin
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: npm publish --access public --registry https://registry.npmjs.org
