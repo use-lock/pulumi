@@ -1,7 +1,7 @@
 {
   "name": "lock",
   "displayName": "Lock",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Manage Lock realms, realm policies, OAuth clients, protected APIs with scopes, and social login providers.",
   "license": "MIT",
   "repository": "https://github.com/use-lock/pulumi",
