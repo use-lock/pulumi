@@ -1,6 +1,6 @@
 {
   "name": "@use-lock/pulumi",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/use-lock/pulumi.git"
@@ -19,7 +19,7 @@
   "pulumi": {
     "resource": true,
     "name": "lock",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "server": "https://github.com/use-lock/pulumi/releases/download/v$%7BVERSION%7D"
   },
   "main": "index.js",
