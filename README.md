@@ -186,7 +186,7 @@ Edit provider definitions and `patch-sdk.js` rather than generated SDK files. Th
 
 Release Please opens the version PR. Merging it creates the tag and starts the release workflow, which publishes plugin archives, checksums, the schema, and `@use-lock/pulumi` to npm.
 
-Configure `RELEASE_PLEASE_TOKEN` for the release automation and `NPM_TOKEN` with permission to publish `@use-lock/pulumi`. The npm token must support non-interactive publishing under the organization's policy. The release checks npm authentication before building and fails if the token is missing or invalid.
+Configure `RELEASE_PLEASE_TOKEN` for the release automation. The npm SDK is published with [trusted publishing](https://docs.npmjs.com/trusted-publishers): `@use-lock/pulumi` trusts the `release.yml` workflow of this repository, so no npm token is stored. To publish the SDK of an existing release again, run the `release` workflow manually with its tag.
 
 When updating the Go client, publish its release first, then update the version in `go.mod` before releasing the provider.
 
