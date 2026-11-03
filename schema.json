@@ -1,7 +1,7 @@
 {
   "name": "lock",
   "displayName": "Lock",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Manage Lock realms, realm policies and themes, OAuth clients, protected APIs with scopes, and social login providers.",
   "license": "MIT",
   "repository": "https://github.com/use-lock/pulumi",
@@ -296,7 +296,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Theme settings by name: Lattice tokens such as `--lt-primary` and settings such as `logo-url`. A file setting holds an `https` URL or `asset:\u003cname\u003e` for a RealmThemeAsset."
+          "description": "Theme settings by name: Lattice tokens such as `--lt-primary` and settings such as `logo-url`. A file setting holds an `https` URL or `asset:<name>` for a RealmThemeAsset."
         }
       },
       "type": "object"
@@ -309,7 +309,7 @@
         },
         "file": {
           "type": "string",
-          "description": "An `https` URL, or `asset:\u003cname\u003e` for a RealmThemeAsset."
+          "description": "An `https` URL, or `asset:<name>` for a RealmThemeAsset."
         },
         "style": {
           "type": "string",
@@ -798,7 +798,7 @@
       ]
     },
     "lock:index:RealmThemeAsset": {
-      "description": "A file a realm's theme serves itself, such as a logo or a font. A theme setting names it as `asset:\u003cname\u003e`. Import using `realm/name`; an import has no source until the program supplies one.",
+      "description": "A file a realm's theme serves itself, such as a logo or a font. A theme setting names it as `asset:<name>`. Import using `realm/name`; an import has no source until the program supplies one.",
       "properties": {
         "mimeType": {
           "type": "string",
