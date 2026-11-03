@@ -2,7 +2,7 @@
   "name": "lock",
   "displayName": "Lock",
   "version": "0.2.0",
-  "description": "Manage Lock realms, realm policies, OAuth clients, protected APIs with scopes, and social login providers.",
+  "description": "Manage Lock realms, realm policies and themes, OAuth clients, protected APIs with scopes, and social login providers.",
   "license": "MIT",
   "repository": "https://github.com/use-lock/pulumi",
   "pluginDownloadURL": "https://github.com/use-lock/pulumi/releases/download/v$%7BVERSION%7D",
@@ -277,6 +277,56 @@
         }
       },
       "type": "object"
+    },
+    "lock:index:RealmTheme": {
+      "properties": {
+        "appearance": {
+          "type": "string",
+          "description": "`system` lets each visitor choose; `light` and `dark` fix the mode for the whole realm."
+        },
+        "fontFaces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/types/lock:index:RealmThemeFontFace"
+          },
+          "description": "The font files the font stacks name."
+        },
+        "values": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Theme settings by name: Lattice tokens such as `--lt-primary` and settings such as `logo-url`. A file setting holds an `https` URL or `asset:\u003cname\u003e` for a RealmThemeAsset."
+        }
+      },
+      "type": "object"
+    },
+    "lock:index:RealmThemeFontFace": {
+      "properties": {
+        "family": {
+          "type": "string",
+          "description": "The font family this file belongs to, as the font stack settings name it."
+        },
+        "file": {
+          "type": "string",
+          "description": "An `https` URL, or `asset:\u003cname\u003e` for a RealmThemeAsset."
+        },
+        "style": {
+          "type": "string",
+          "description": "The style the file holds: `normal` or `italic`."
+        },
+        "weight": {
+          "type": "integer",
+          "description": "The weight the file holds, from 1 to 1000."
+        }
+      },
+      "type": "object",
+      "required": [
+        "family",
+        "file",
+        "weight",
+        "style"
+      ]
     },
     "lock:index:ScopeArgs": {
       "properties": {
@@ -704,6 +754,10 @@
           "type": "string",
           "description": "Immutable realm identifier. Changing it replaces the realm and its contents.",
           "replaceOnChanges": true
+        },
+        "theme": {
+          "$ref": "#/types/lock:index:RealmTheme",
+          "description": "How the realm looks to its users. Removing a value, or the whole theme, puts what it managed back to the instance's look. The master realm takes no theme."
         }
       },
       "required": [
@@ -731,12 +785,81 @@
           "type": "string",
           "description": "Immutable realm identifier. Changing it replaces the realm and its contents.",
           "replaceOnChanges": true
+        },
+        "theme": {
+          "$ref": "#/types/lock:index:RealmTheme",
+          "description": "How the realm looks to its users. Removing a value, or the whole theme, puts what it managed back to the instance's look. The master realm takes no theme."
         }
       },
       "requiredInputs": [
         "slug",
         "name",
         "domain"
+      ]
+    },
+    "lock:index:RealmThemeAsset": {
+      "description": "A file a realm's theme serves itself, such as a logo or a font. A theme setting names it as `asset:\u003cname\u003e`. Import using `realm/name`; an import has no source until the program supplies one.",
+      "properties": {
+        "mimeType": {
+          "type": "string",
+          "description": "The type the file is served with."
+        },
+        "name": {
+          "type": "string",
+          "description": "Lowercase file name. It decides the type the file is served with: `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg` or `.woff2`. Changing it replaces the file.",
+          "replaceOnChanges": true
+        },
+        "realm": {
+          "type": "string",
+          "description": "Slug of the realm the file belongs to. Changing it replaces the file.",
+          "replaceOnChanges": true
+        },
+        "sha256": {
+          "type": "string",
+          "description": "The SHA-256 of the file's contents."
+        },
+        "size": {
+          "type": "integer",
+          "description": "The file's size in bytes."
+        },
+        "source": {
+          "$ref": "pulumi.json#/Asset",
+          "description": "The file's contents, up to 5 MB, as an asset such as `new pulumi.asset.FileAsset(path)`. Pulumi uploads it again when its contents change."
+        },
+        "url": {
+          "type": "string",
+          "description": "The address the file is served from on the realm's host."
+        }
+      },
+      "required": [
+        "realm",
+        "name",
+        "source",
+        "url",
+        "mimeType",
+        "size",
+        "sha256"
+      ],
+      "inputProperties": {
+        "name": {
+          "type": "string",
+          "description": "Lowercase file name. It decides the type the file is served with: `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg` or `.woff2`. Changing it replaces the file.",
+          "replaceOnChanges": true
+        },
+        "realm": {
+          "type": "string",
+          "description": "Slug of the realm the file belongs to. Changing it replaces the file.",
+          "replaceOnChanges": true
+        },
+        "source": {
+          "$ref": "pulumi.json#/Asset",
+          "description": "The file's contents, up to 5 MB, as an asset such as `new pulumi.asset.FileAsset(path)`. Pulumi uploads it again when its contents change."
+        }
+      },
+      "requiredInputs": [
+        "realm",
+        "name",
+        "source"
       ]
     },
     "lock:index:SocialProvider": {

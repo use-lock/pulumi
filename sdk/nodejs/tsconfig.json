@@ -26,6 +26,7 @@
         "protectedResource.ts",
         "provider.ts",
         "realm.ts",
+        "realmThemeAsset.ts",
         "socialProvider.ts",
         "types/enums/index.ts",
         "types/index.ts",

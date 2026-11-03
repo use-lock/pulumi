@@ -54,6 +54,10 @@ export class Realm extends pulumi.CustomResource {
      * Immutable realm identifier. Changing it replaces the realm and its contents.
      */
     declare public readonly slug: pulumi.Output<string>;
+    /**
+     * How the realm looks to its users. Removing a value, or the whole theme, puts what it managed back to the instance's look. The master realm takes no theme.
+     */
+    declare public readonly theme: pulumi.Output<outputs.RealmTheme | undefined>;
 
     /**
      * Create a Realm resource with the given unique name, arguments, and options.
@@ -79,6 +83,7 @@ export class Realm extends pulumi.CustomResource {
             resourceInputs["name"] = args?.name;
             resourceInputs["settings"] = args?.settings;
             resourceInputs["slug"] = args?.slug;
+            resourceInputs["theme"] = args?.theme;
             resourceInputs["domainStatus"] = undefined /*out*/;
             resourceInputs["host"] = undefined /*out*/;
             resourceInputs["issuer"] = undefined /*out*/;
@@ -92,6 +97,7 @@ export class Realm extends pulumi.CustomResource {
             resourceInputs["name"] = undefined /*out*/;
             resourceInputs["settings"] = undefined /*out*/;
             resourceInputs["slug"] = undefined /*out*/;
+            resourceInputs["theme"] = undefined /*out*/;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         const replaceOnChanges = { replaceOnChanges: ["slug"] };
@@ -117,4 +123,8 @@ export interface RealmArgs {
      * Immutable realm identifier. Changing it replaces the realm and its contents.
      */
     slug: pulumi.Input<string>;
+    /**
+     * How the realm looks to its users. Removing a value, or the whole theme, puts what it managed back to the instance's look. The master realm takes no theme.
+     */
+    theme?: pulumi.Input<inputs.RealmThemeArgs | undefined>;
 }

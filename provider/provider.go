@@ -12,9 +12,9 @@ func New() (p.Provider, error) {
 	provider, err := infer.NewProviderBuilder().
 		WithConfig(infer.Config(&Config{})).
 		WithModuleMap(map[tokens.ModuleName]tokens.ModuleName{"provider": "index"}).
-		WithResources(infer.Resource(Realm{}), infer.Resource(Client{}), infer.Resource(ProtectedResource{}), infer.Resource(SocialProvider{})).
+		WithResources(infer.Resource(Realm{}), infer.Resource(RealmThemeAsset{}), infer.Resource(Client{}), infer.Resource(ProtectedResource{}), infer.Resource(SocialProvider{})).
 		WithDisplayName("Lock").
-		WithDescription("Manage Lock realms, realm policies, OAuth clients, protected APIs with scopes, and social login providers.").
+		WithDescription("Manage Lock realms, realm policies and themes, OAuth clients, protected APIs with scopes, and social login providers.").
 		WithPublisher("use-lock").
 		WithLicense("MIT").
 		WithRepository("https://github.com/use-lock/pulumi").

@@ -25,6 +25,11 @@ export type Realm = import("./realm").Realm;
 export const Realm: typeof import("./realm").Realm = null as any;
 utilities.lazyLoad(exports, ["Realm"], () => require("./realm"));
 
+export { RealmThemeAssetArgs } from "./realmThemeAsset";
+export type RealmThemeAsset = import("./realmThemeAsset").RealmThemeAsset;
+export const RealmThemeAsset: typeof import("./realmThemeAsset").RealmThemeAsset = null as any;
+utilities.lazyLoad(exports, ["RealmThemeAsset"], () => require("./realmThemeAsset"));
+
 export { SocialProviderArgs } from "./socialProvider";
 export type SocialProvider = import("./socialProvider").SocialProvider;
 export const SocialProvider: typeof import("./socialProvider").SocialProvider = null as any;
@@ -53,6 +58,8 @@ const _module = {
                 return new ProtectedResource(name, <any>undefined, { urn })
             case "lock:index:Realm":
                 return new Realm(name, <any>undefined, { urn })
+            case "lock:index:RealmThemeAsset":
+                return new RealmThemeAsset(name, <any>undefined, { urn })
             case "lock:index:SocialProvider":
                 return new SocialProvider(name, <any>undefined, { urn })
             default:

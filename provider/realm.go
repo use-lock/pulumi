@@ -18,6 +18,7 @@ type RealmArgs struct {
 	Name     string         `pulumi:"name"`
 	Domain   string         `pulumi:"domain"`
 	Settings *RealmSettings `pulumi:"settings,optional"`
+	Theme    *RealmTheme    `pulumi:"theme,optional"`
 }
 
 type RealmState struct {
@@ -37,6 +38,7 @@ func (r *RealmArgs) Annotate(a infer.Annotator) {
 	a.Describe(&r.Slug, "Immutable realm identifier. Changing it replaces the realm and its contents.")
 	a.Describe(&r.Domain, "Realm hostname, without a scheme or path. DNS verification status is exposed as domainStatus.")
 	a.Describe(&r.Settings, "Realm policy overrides. Removing an override stops managing it and retains its server value; the API has no reset-to-default operation. Set an explicit value to change it.")
+	a.Describe(&r.Theme, "How the realm looks to its users. Removing a value, or the whole theme, puts what it managed back to the instance's look. The master realm takes no theme.")
 }
 
 func (Realm) Create(ctx context.Context, req infer.CreateRequest[RealmArgs]) (infer.CreateResponse[RealmState], error) {
@@ -48,9 +50,11 @@ func (Realm) Create(ctx context.Context, req infer.CreateRequest[RealmArgs]) (in
 	body, err := json.Marshal(struct {
 		admin.CreateRealmData
 		Settings *realmSettingsWire `json:"settings,omitempty"`
+		Theme    *realmThemeWire    `json:"theme,omitempty"`
 	}{
 		CreateRealmData: admin.CreateRealmData{Slug: req.Inputs.Slug, Name: req.Inputs.Name, Domain: req.Inputs.Domain},
 		Settings:        settingsToWire(req.Inputs.Settings),
+		Theme:           themeToWire(req.Inputs.Theme, nil),
 	})
 	if err != nil {
 		return infer.CreateResponse[RealmState]{}, err
@@ -69,6 +73,10 @@ func (Realm) Create(ctx context.Context, req infer.CreateRequest[RealmArgs]) (in
 	}
 	state := realmState(response.Data)
 	state.Settings, err = settingsFromResponse(response.Body, req.Inputs.Settings)
+	if err != nil {
+		return infer.CreateResponse[RealmState]{}, err
+	}
+	state.Theme, err = themeFromResponse(response.Body, req.Inputs.Theme)
 	return infer.CreateResponse[RealmState]{ID: response.Data.Slug, Output: state}, err
 }
 
@@ -81,7 +89,8 @@ func (Realm) Update(ctx context.Context, req infer.UpdateRequest[RealmArgs, Real
 	body, err := json.Marshal(struct {
 		admin.UpdateRealmData
 		Settings *realmSettingsWire `json:"settings,omitempty"`
-	}{UpdateRealmData: admin.UpdateRealmData{Name: &req.Inputs.Name, Domain: &req.Inputs.Domain}, Settings: settingsToWire(req.Inputs.Settings)})
+		Theme    *realmThemeWire    `json:"theme,omitempty"`
+	}{UpdateRealmData: admin.UpdateRealmData{Name: &req.Inputs.Name, Domain: &req.Inputs.Domain}, Settings: settingsToWire(req.Inputs.Settings), Theme: themeToWire(req.Inputs.Theme, req.State.Theme)})
 	if err != nil {
 		return infer.UpdateResponse[RealmState]{}, err
 	}
@@ -99,6 +108,10 @@ func (Realm) Update(ctx context.Context, req infer.UpdateRequest[RealmArgs, Real
 	}
 	state := realmState(response.Data)
 	state.Settings, err = settingsFromResponse(response.Body, req.Inputs.Settings)
+	if err != nil {
+		return infer.UpdateResponse[RealmState]{}, err
+	}
+	state.Theme, err = themeFromResponse(response.Body, req.Inputs.Theme)
 	return infer.UpdateResponse[RealmState]{Output: state}, err
 }
 
@@ -123,6 +136,10 @@ func (Realm) Read(ctx context.Context, req infer.ReadRequest[RealmArgs, RealmSta
 	}
 	state := realmState(response.Data)
 	state.Settings, err = settingsFromResponse(response.Body, req.Inputs.Settings)
+	if err != nil {
+		return infer.ReadResponse[RealmArgs, RealmState]{}, err
+	}
+	state.Theme, err = themeFromResponse(response.Body, req.Inputs.Theme)
 	if err != nil {
 		return infer.ReadResponse[RealmArgs, RealmState]{}, err
 	}
