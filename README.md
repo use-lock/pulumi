@@ -95,6 +95,40 @@ An audience is spelled exactly as the client requests it:
 
 The realm issuer itself is also a valid audience. Lock rejects an entry that is neither the issuer nor a registered resource of the realm, so declare the `ProtectedResource` in the same program; referencing its outputs orders the two correctly. A client may still hold an audience whose resource was deleted later. Lock compares values as exact strings: a relative identifier has no leading slash (Lock rejects one), so join it to the issuer with a single `/`; add no trailing slash, and list each audience once.
 
+## Realm Themes
+
+A realm's `theme` sets how its sign-in screens, account page and emails look. `values` holds the theme settings by name: Lattice tokens such as `--lt-primary`, and settings such as `logo-url`. Files the realm serves itself are `RealmThemeAsset` resources, and a setting names one as `asset:<name>`:
+
+```typescript
+const realm = new lock.Realm("staging", {
+    slug: "staging",
+    name: "Staging",
+    domain: config.require("realmDomain"),
+    theme: {
+        appearance: "dark",
+        values: {
+            "--lt-primary": "#3366cc",
+            "--lt-font-sans": "'Example Text', Georgia, serif",
+            "logo-url": "asset:wordmark.svg",
+            "background-image-url": "https://cdn.example.com/art.webp",
+        },
+        fontFaces: [{ family: "Example Text", file: "asset:example-text.woff2", weight: 400, style: "normal" }],
+    },
+}, { provider });
+
+for (const name of ["wordmark.svg", "example-text.woff2"]) {
+    new lock.RealmThemeAsset(name, {
+        realm: realm.slug,
+        name,
+        source: new pulumi.asset.FileAsset(`assets/${name}`),
+    }, { provider });
+}
+```
+
+Pulumi uploads a file again when its contents change. Lock accepts PNG, JPEG, WebP, SVG and WOFF2 up to 5 MB, and the file's name decides its type.
+
+The theme can name a file before it exists, which is what lets the realm be created first. A setting whose file is missing renders without it. Removing a value, or the whole `theme`, puts what it managed back to the instance's look. Values the program does not manage stay as they are, such as those set in the console. The master realm takes no theme.
+
 ## Authentication
 
 `baseUrl` is the master realm issuer, such as `https://lock.example`, without `/api`.
@@ -114,7 +148,7 @@ The provider obtains separate scoped tokens for each resource type:
 
 | Resource | Token audience | Required scopes |
 | --- | --- | --- |
-| `Realm` | `{issuer}/admin-api` | `realms:read realms:write` |
+| `Realm`, `RealmThemeAsset` | `{issuer}/admin-api` | `realms:read realms:write` |
 | `Client` | `{issuer}/api` | `clients:read clients:write` |
 | `ProtectedResource` | `{issuer}/api` | `resources:read resources:write` |
 | `SocialProvider` | `{issuer}/api` | `social-providers:read social-providers:write` |
@@ -126,6 +160,7 @@ Grant the scopes for the resource types your program manages. Tokens are request
 | Resource | Import ID |
 | --- | --- |
 | `lock:index:Realm` | Realm slug, such as `staging` |
+| `lock:index:RealmThemeAsset` | `realm-slug/file-name` |
 | `lock:index:Client` | `realm-slug/client-id` |
 | `lock:index:ProtectedResource` | `realm-slug/resource-uuid` |
 | `lock:index:SocialProvider` | `realm-slug/provider-uuid` |

@@ -133,6 +133,40 @@ export interface RealmSettings {
     trustedClients?: string[];
 }
 
+export interface RealmTheme {
+    /**
+     * `system` lets each visitor choose; `light` and `dark` fix the mode for the whole realm.
+     */
+    appearance?: string;
+    /**
+     * The font files the font stacks name.
+     */
+    fontFaces?: outputs.RealmThemeFontFace[];
+    /**
+     * Theme settings by name: Lattice tokens such as `--lt-primary` and settings such as `logo-url`. A file setting holds an `https` URL or `asset:<name>` for a RealmThemeAsset.
+     */
+    values?: {[key: string]: string};
+}
+
+export interface RealmThemeFontFace {
+    /**
+     * The font family this file belongs to, as the font stack settings name it.
+     */
+    family: string;
+    /**
+     * An `https` URL, or `asset:<name>` for a RealmThemeAsset.
+     */
+    file: string;
+    /**
+     * The style the file holds: `normal` or `italic`.
+     */
+    style: string;
+    /**
+     * The weight the file holds, from 1 to 1000.
+     */
+    weight: number;
+}
+
 export interface ScopeArgs {
     /**
      * Human readable scope description. Omit to clear the existing description.

@@ -133,6 +133,40 @@ export interface RealmSettingsArgs {
     trustedClients?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }
 
+export interface RealmThemeArgs {
+    /**
+     * `system` lets each visitor choose; `light` and `dark` fix the mode for the whole realm.
+     */
+    appearance?: pulumi.Input<string | undefined>;
+    /**
+     * The font files the font stacks name.
+     */
+    fontFaces?: pulumi.Input<pulumi.Input<inputs.RealmThemeFontFaceArgs>[] | undefined>;
+    /**
+     * Theme settings by name: Lattice tokens such as `--lt-primary` and settings such as `logo-url`. A file setting holds an `https` URL or `asset:<name>` for a RealmThemeAsset.
+     */
+    values?: pulumi.Input<{[key: string]: pulumi.Input<string>} | undefined>;
+}
+
+export interface RealmThemeFontFaceArgs {
+    /**
+     * The font family this file belongs to, as the font stack settings name it.
+     */
+    family: pulumi.Input<string>;
+    /**
+     * An `https` URL, or `asset:<name>` for a RealmThemeAsset.
+     */
+    file: pulumi.Input<string>;
+    /**
+     * The style the file holds: `normal` or `italic`.
+     */
+    style: pulumi.Input<string>;
+    /**
+     * The weight the file holds, from 1 to 1000.
+     */
+    weight: pulumi.Input<number>;
+}
+
 export interface ScopeArgsArgs {
     /**
      * Human readable scope description. Omit to clear the existing description.
