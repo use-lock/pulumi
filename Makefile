@@ -13,8 +13,11 @@ check:
 	go test -race ./...
 	test -z "$$(gofmt -l .)"
 
+# release-please rewrites schema.json without the generator's HTML escaping, so
+# the up-to-date check in CI has to compare that form.
 schema: build
 	pulumi package get-schema ./$(BIN) > schema.json
+	jq . schema.json > schema.json.tmp && mv schema.json.tmp schema.json
 
 install-local: build
 	pulumi plugin install resource lock $(VERSION) --file ./bin
