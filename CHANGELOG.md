@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/use-lock/pulumi/compare/v0.2.0...v0.3.0) (2026-11-03)
+
+
+### Features
+
+* manage realm themes and their files ([d5b3a65](https://github.com/use-lock/pulumi/commit/d5b3a65b419da194e3ede10e648138a4cc4b43af))
+* manage realm themes and their files ([224738d](https://github.com/use-lock/pulumi/commit/224738d5c27ef8f0e00861eaa262324f29d5cee2))
+
 ## [0.2.0](https://github.com/use-lock/pulumi/compare/v0.1.0...v0.2.0) (2026-10-26)
 
 
